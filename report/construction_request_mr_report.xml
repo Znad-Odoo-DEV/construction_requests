@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      The materials requisition: the page the store and the site work from.
+      A heading, a two column block, a seven column table and three signature
+      boxes across the foot.
+
+      "Stock Available" and "Previous Requests Quantity" are computed, so the
+      page cannot disagree with the database it was printed from.
+
+      And the three signatures are read off the people who signed rather than
+      off columns on the request. See res_users.py.
+    -->
+
+    <record id="action_report_request_mr" model="ir.actions.report">
+        <field name="name">Material Requisition</field>
+        <field name="model">construction.request</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">construction_requests.report_request_mr</field>
+        <field name="report_file">construction_requests.report_request_mr</field>
+        <field name="print_report_name">object.name</field>
+        <field name="binding_model_id" ref="model_construction_request"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_request_mr">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.internal_layout">
+                    <div class="page"
+                         style="font-family: 'Segoe UI', sans-serif; font-size: 13px; color: #333;">
+
+                        <div class="text-center mt-3 mb-3" style="color: #007BFF;">
+                            <h1>
+                                <span class="h3-fs" style="color: #007BFF;">
+                                    <u>MATERIALS REQUISITION (MR)</u>
+                                </span>
+                            </h1>
+                        </div>
+
+                        <div style="border-radius: 10px; background-color: #f4f6f9; padding: 20px; border-left: 4px solid #007BFF; margin-bottom: 30px;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div t-if="o.project_id">
+                                        <strong style="color: #007BFF;">Project Site:</strong><br/>
+                                        <span t-field="o.project_id"/>
+                                    </div>
+                                    <br/>
+                                    <!--
+                                      The project's own code. It lives on
+                                      project.project in construction_project, which
+                                      this module does not depend on - so it is
+                                      asked for rather than assumed, and the
+                                      line is simply absent when the projects
+                                      application is not installed.
+                                    -->
+                                    <t t-set="project_code"
+                                       t-value="o.project_id.construction_code if 'construction_code' in o.project_id._fields else False"/>
+                                    <div t-if="project_code">
+                                        <strong style="color: #007BFF;">Project ID:</strong><br/>
+                                        <span t-out="project_code"/>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div t-if="o.name">
+                                        <strong style="color: #007BFF;">MR Reference:</strong><br/>
+                                        <span t-field="o.name"/>
+                                    </div>
+                                    <br/>
+                                    <!--
+                                      The employee is not always filled, so this
+                                      line falls back to whoever raised the
+                                      request.
+                                    -->
+                                    <div t-if="o.employee_id or o.requested_by_id">
+                                        <strong style="color: #007BFF;">Requested By:</strong><br/>
+                                        <span t-out="o.employee_id.name or o.requested_by_id.name"/>
+                                    </div>
+                                    <br/>
+                                    <!--
+                                      The word the store has been reading for
+                                      two years. Empty is ASAP, and saying so
+                                      on the page is what makes an empty field
+                                      an answer rather than an omission.
+                                    -->
+                                    <div>
+                                        <strong style="color: #007BFF;">Needed By:</strong><br/>
+                                        <span t-field="o.date_required_label"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm" style="width: 100%; margin-bottom: 40px;">
+                            <thead style="background-color: #e9ecef; color: #000;">
+                                <tr style="border-bottom: 2px solid #dee2e6;">
+                                    <th style="text-align: center;">#</th>
+                                    <th>Item Name</th>
+                                    <th style="text-align: center;">SN Of Item</th>
+                                    <th style="text-align: center;">Unit</th>
+                                    <th style="text-align: center;">Stock Available</th>
+                                    <th style="text-align: center;">Quantity Required</th>
+                                    <th style="text-align: center;">Previous Requests Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="row_number" t-value="1"/>
+                                <t t-foreach="o.material_line_ids" t-as="line">
+                                    <tr style="border-bottom: 1px solid #f1f1f1;">
+                                        <td style="text-align: center;"><t t-out="row_number"/></td>
+                                        <td><span t-out="line.product_id.display_name or line.description"/></td>
+                                        <td style="text-align: center;"><span t-out="line.product_id.default_code or ''"/></td>
+                                        <td style="text-align: center;"><span t-field="line.uom_id"/></td>
+                                        <td style="text-align: center;"><span t-field="line.quantity_available"/></td>
+                                        <td style="text-align: center;"><span t-field="line.quantity"/></td>
+                                        <td style="text-align: center;"><span t-field="line.quantity_previous"/></td>
+                                    </tr>
+                                    <t t-set="row_number" t-value="row_number + 1"/>
+                                </t>
+                                <tr t-if="not o.material_line_ids">
+                                    <td colspan="7" class="text-center text-muted">
+                                        Nothing has been listed on this request.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div style="margin-top: 40px;">
+                            <div class="row text-center" style="font-size: 12px;">
+                                <div class="col-3"/>
+                                <t t-call="construction_requests.report_request_signature">
+                                    <t t-set="role" t-value="'Submitted by'"/>
+                                    <t t-set="who" t-value="o.requested_by_id"/>
+                                    <t t-set="when" t-value="o.date_request"/>
+                                </t>
+                                <t t-call="construction_requests.report_request_signature">
+                                    <t t-set="role" t-value="'Site Engineer'"/>
+                                    <t t-set="who" t-value="o.pe_reviewer_id"/>
+                                    <t t-set="when" t-value="o.pe_review_date"/>
+                                </t>
+                                <t t-call="construction_requests.report_request_signature">
+                                    <t t-set="role" t-value="'Project Manager'"/>
+                                    <t t-set="who" t-value="o.approver_id"/>
+                                    <t t-set="when" t-value="o.approval_date"/>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!--
+      One signature box, said once. Three copies of a thing are three places
+      to fix it.
+    -->
+    <template id="report_request_signature">
+        <div class="col-3">
+            <strong style="color: #007BFF;"><t t-out="role"/></strong><br/>
+            <span t-out="who.name or ''"/><br/>
+            <span><em>Date:</em></span><br/>
+            <span t-out="when and when.strftime('%Y-%m-%d') or ''"/><br/>
+            <em>Signature:</em><br/>
+            <img t-if="who.construction_signature"
+                 t-att-src="image_data_uri(who.construction_signature)"
+                 class="float-left" style="width: 225px; max-height: 100px;"
+                 alt="Signature"/>
+        </div>
+    </template>
+
+</odoo>
