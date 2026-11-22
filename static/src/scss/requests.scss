@@ -1,0 +1,51 @@
+// The two pieces of look that XML classes cannot express.
+//
+
+// The dashboard icon. Bootstrap has no size between an avatar and a hero
+// image, and at 40px these drawings are unreadable - they are line art, not
+// photographs.
+.o_construction_request_dashboard {
+    .o_construction_dashboard_icon img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+    }
+
+    // The counts are buttons, and a button that looks like a button in a row
+    // of labels reads as clutter. They look like the label they replaced and
+    // behave like the link they are.
+    .btn-link {
+        text-decoration: none;
+        color: inherit;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+// The ribbon repeats the column heading when the board is grouped by status,
+// and earns itself the moment somebody groups by project or by employee -
+// the arrangement where a card gives no other clue what state it is in.
+.o_construction_request_kanban {
+    // A face on a card is a glance, not a portrait. many2one_avatar_user takes
+    // the size its container allows, and in an <aside> that was a quarter of
+    // the card - the biggest thing on it, for the least important fact.
+    .o_construction_kanban_avatar img,
+    .o_construction_kanban_avatar .o_avatar {
+        width: 24px;
+        height: 24px;
+    }
+
+    // Odoo's ribbon, sized for a card instead of a form sheet.
+    //
+    // There used to be forty lines here drawing a diagonal band by hand, and
+    // web/views/widgets/ribbon draws the same band - with variables for the
+    // two things the hand-cut one existed to change. So it is three
+    // declarations now, and they are the ones the widget asks for.
+    .ribbon {
+        --Ribbon-wrapper-width: 6.5rem;
+        --Ribbon-font-size: 0.6rem;
+        --Ribbon-height: 1.5rem;
+    }
+}
