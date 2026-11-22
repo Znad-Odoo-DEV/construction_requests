@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+      The thirteen kinds of request, with their review and numbering settings.
+
+      Where each setting comes from, so that anybody changing one knows what
+      they are overriding:
+
+        needs_pe_review - true for all thirteen.
+
+        needs_hr_review - ALR, ELR, ASR, SC, EC and the notice of resigning.
+
+        numbering - some types draw from a sequence named after the type
+        alone; the others are numbered per company and project.
+
+      noupdate so that a module upgrade never puts back a setting somebody has
+      deliberately changed. The codes are what the Python asks for and are the
+      one thing here not to edit.
+    -->
+    <data noupdate="1">
+
+        <!-- ============ raised on a project, numbered per project ========= -->
+
+        <record id="request_type_mr" model="construction.request.type">
+            <field name="name">Material Request</field>
+            <field name="code">MR</field>
+            <field name="sequence">10</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="description">Materials wanted on site.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/mr.png"/>
+        </record>
+
+        <record id="request_type_spc" model="construction.request.type">
+            <field name="name">Site Payment Certificate</field>
+            <field name="code">SPC</field>
+            <field name="sequence">20</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="description">A subcontractor's certified work, for payment.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/spc.png"/>
+        </record>
+
+        <record id="request_type_ir" model="construction.request.type">
+            <field name="name">Inspection Request</field>
+            <field name="code">IR</field>
+            <field name="sequence">30</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="description">An inspection asked of the consultant.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/ir.png"/>
+        </record>
+
+        <record id="request_type_icr" model="construction.request.type">
+            <field name="name">Internal Clearance Request</field>
+            <field name="code">ICR</field>
+            <field name="sequence">40</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/icr.png"/>
+        </record>
+
+        <record id="request_type_msr" model="construction.request.type">
+            <field name="name">Material Submittal Request</field>
+            <field name="code">MSR</field>
+            <field name="sequence">50</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="description">A material put to the consultant for approval.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/msr.png"/>
+        </record>
+
+        <record id="request_type_pqs" model="construction.request.type">
+            <field name="name">Prequalification Submittal</field>
+            <field name="code">PQS</field>
+            <field name="sequence">60</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/pqs.png"/>
+        </record>
+
+        <record id="request_type_sds" model="construction.request.type">
+            <field name="name">Shopdrawing Submittal</field>
+            <field name="code">SDS</field>
+            <field name="sequence">70</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="False"/>
+            <field name="numbering">per_project</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/sds.png"/>
+        </record>
+
+        <!-- ============ about a person, numbered once for the company ===== -->
+
+        <record id="request_type_alr" model="construction.request.type">
+            <field name="name">Annual Leave Request</field>
+            <field name="code">ALR</field>
+            <field name="sequence">80</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="description">Annual leave, with the allowance and the ticket that go with it.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/alr.png"/>
+        </record>
+
+        <record id="request_type_elr" model="construction.request.type">
+            <field name="name">Emergency Leave Request</field>
+            <field name="code">ELR</field>
+            <field name="sequence">90</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/elr.png"/>
+        </record>
+
+        <record id="request_type_asr" model="construction.request.type">
+            <field name="open_for_new" eval="True"/>
+            <field name="name">Advance Salary Request</field>
+            <field name="code">ASR</field>
+            <field name="sequence">100</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="description">An advance against salary, repaid in installments.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/asr.png"/>
+        </record>
+
+        <record id="request_type_res" model="construction.request.type">
+            <field name="name">Notice of Resigning</field>
+            <field name="code">RES</field>
+            <field name="sequence">110</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="description">A resignation. Approving it opens the final settlement.</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/res.png"/>
+        </record>
+
+        <record id="request_type_sc" model="construction.request.type">
+            <field name="open_for_new" eval="True"/>
+            <field name="name">Salary Certificate</field>
+            <field name="code">SC</field>
+            <field name="sequence">120</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/sc.png"/>
+        </record>
+
+        <record id="request_type_ec" model="construction.request.type">
+            <field name="open_for_new" eval="True"/>
+            <field name="name">Experience Certificate</field>
+            <field name="code">EC</field>
+            <field name="sequence">130</field>
+            <field name="needs_pe_review" eval="True"/>
+            <field name="needs_hr_review" eval="True"/>
+            <field name="numbering">global</field>
+            <field name="image" type="base64" file="construction_requests/static/src/img/ec.png"/>
+        </record>
+
+    </data>
+</odoo>
