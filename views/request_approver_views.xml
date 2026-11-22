@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      Where the approver is set. It belongs
+      on the two records it is a fact about, so that adding a project or moving
+      an engineer is a field somebody edits rather than code somebody deploys.
+    -->
+
+    <record id="view_project_form_request_approver" model="ir.ui.view">
+        <field name="name">project.project.form.request.approver</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="construction_request_approver_id"
+                       widget="many2one_avatar_user"
+                       groups="construction_requests.group_request_approver"/>
+                <field name="construction_consultant_email" widget="email"/>
+                <field name="construction_consultant_re_email" widget="email"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_company_form_request_approver" model="ir.ui.view">
+        <field name="name">res.company.form.request.approver</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="construction_request_approver_id"
+                       widget="many2one_avatar_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- and the one filter an approver opens the list to find -->
+    <record id="view_construction_request_search_approver" model="ir.ui.view">
+        <field name="name">construction.request.search.approver</field>
+        <field name="model">construction.request</field>
+        <field name="inherit_id" ref="construction_requests.view_construction_request_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='requested_by_id']" position="after">
+                <field name="approver_expected_id"/>
+            </xpath>
+            <xpath expr="//filter[@name='mine']" position="after">
+                <filter name="assigned_to_me" string="Assigned to Me"
+                        domain="[('approver_expected_id', '=', uid),
+                                 ('state', 'not in', ('approved', 'rejected',
+                                                      'cancelled'))]"/>
+                <filter name="to_approve_by_me" string="Waiting for My Approval"
+                        domain="[('approver_expected_id', '=', uid),
+                                 ('state', '=', 'to_approve')]"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

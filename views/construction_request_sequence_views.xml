@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_construction_request_sequence_list" model="ir.ui.view">
+        <field name="name">construction.request.sequence.list</field>
+        <field name="model">construction.request.sequence</field>
+        <field name="arch" type="xml">
+            <list string="Request Numbering" editable="bottom" multi_edit="1">
+                <field name="company_id" options="{'no_create': True}"/>
+                <field name="project_id" options="{'no_create': True}"/>
+                <field name="request_type_id" options="{'no_create': True}"/>
+                <field name="prefix" placeholder="built from the three above"/>
+                <field name="next_number"/>
+                <field name="sequence_id" optional="hide" readonly="1"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_construction_request_sequence_search" model="ir.ui.view">
+        <field name="name">construction.request.sequence.search</field>
+        <field name="model">construction.request.sequence</field>
+        <field name="arch" type="xml">
+            <search string="Request Numbering">
+                <field name="project_id"/>
+                <field name="request_type_id"/>
+                <field name="prefix"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="by_project" string="Project"
+                            domain="[]" context="{'group_by': 'project_id'}"/>
+                    <filter name="by_type" string="Request Type"
+                            domain="[]" context="{'group_by': 'request_type_id'}"/>
+                    <filter name="by_company" string="Company"
+                            domain="[]" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_request_sequence" model="ir.actions.act_window">
+        <field name="name">Numbering</field>
+        <field name="res_model">construction.request.sequence</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'search_default_by_project': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing is numbered per project yet</p>
+            <p>
+                Rows appear here on their own, the first time a request is
+                submitted for a company, a project and a type. Change the prefix
+                or reset the counter here.
+            </p>
+        </field>
+    </record>
+
+</odoo>

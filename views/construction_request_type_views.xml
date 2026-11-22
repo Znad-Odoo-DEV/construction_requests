@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_construction_request_type_list" model="ir.ui.view">
+        <field name="name">construction.request.type.list</field>
+        <field name="model">construction.request.type</field>
+        <field name="arch" type="xml">
+            <list string="Request Types">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="needs_pe_review" string="P.E/P.C"/>
+                <field name="needs_hr_review" string="HR"/>
+                <field name="open_for_new" string="Raised Here"/>
+                <field name="numbering"/>
+                <field name="sequence_count" string="Project sequences"
+                       optional="hide"/>
+                <field name="pending_pe_count" string="At P.E/P.C"/>
+                <field name="pending_hr_count" string="At HR"/>
+                <field name="pending_approval_count" string="To Approve"/>
+                <field name="pending_count" string="Waiting" sum="Waiting"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_construction_request_type_form" model="ir.ui.view">
+        <field name="name">construction.request.type.form</field>
+        <field name="model">construction.request.type</field>
+        <field name="arch" type="xml">
+            <form string="Request Type">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <field name="image" widget="image" class="oe_avatar"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Annual Leave Request"/></h1>
+                    </div>
+                    <group>
+                        <group string="Identity">
+                            <field name="code" placeholder="ALR"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Who has to see it">
+                            <field name="needs_pe_review"/>
+                            <field name="needs_hr_review"/>
+                            <field name="open_for_new"/>
+                        </group>
+                    </group>
+                    <group string="Numbering">
+                        <field name="numbering" widget="radio"/>
+                        <field name="sequence_id" readonly="1"
+                               invisible="numbering != 'global'"/>
+                    </group>
+                    <notebook invisible="numbering != 'per_project'">
+                        <page string="Per Project" name="sequences">
+                            <field name="sequence_ids">
+                                <list editable="bottom">
+                                    <field name="company_id"/>
+                                    <field name="project_id"/>
+                                    <field name="prefix" placeholder="ABC/PRJ/MR/"/>
+                                    <field name="next_number"/>
+                                </list>
+                            </field>
+                            <p class="text-muted">
+                                A combination that is not here is made the first
+                                time somebody submits a request for it, with a
+                                prefix built from the company code, the project
+                                and the request code. Nobody is stopped at five
+                                in the afternoon by a missing row.
+                            </p>
+                        </page>
+                    </notebook>
+                    <group string="Description">
+                        <field name="description" nolabel="1"
+                               placeholder="What this request is for."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!--
+      The board. The numbers are counted when the card is drawn, and each one opens the requests behind it - a count nobody can
+      click is a number somebody goes looking for by hand.
+    -->
+    <record id="view_construction_request_type_kanban" model="ir.ui.view">
+        <field name="name">construction.request.type.kanban</field>
+        <field name="model">construction.request.type</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard o_construction_request_dashboard"
+                    create="0" can_open="false" records_draggable="false">
+                <field name="pending_count"/>
+                <field name="needs_pe_review"/>
+                <field name="needs_hr_review"/>
+                <field name="open_for_new"/>
+                <templates>
+                    <t t-name="card">
+                        <!--
+                          The icon to the left of the name, in an aside, which
+                          reads as a heading with a mark beside it rather than
+                          a poster.
+                        -->
+                        <aside class="col-2 pe-2">
+                            <field name="image" widget="image"
+                                   class="o_construction_dashboard_icon"
+                                   options="{'size': [64, 64], 'no_open': True}"/>
+                        </aside>
+
+                        <main>
+                            <div class="fs-4 fw-bold mb-3">
+                                <field name="name"/>
+                            </div>
+
+                            <!--
+                              One row per review this type actually has. A card
+                              reading "Pending For HR Review: 0" on a type that
+                              never goes to HR is a nought that means nothing,
+                              and a screen of those teaches people to stop
+                              reading the numbers.
+
+                              Green at nought, red above it - the reason the
+                              board works at a glance: nothing to do is a
+                              colour, not a digit somebody has to focus on and
+                              compare. The two shades are Bootstrap's own
+                              alert-success and alert-danger backgrounds, and
+                              they are pale enough for the dark text to read
+                              on.
+                            -->
+                            <!-- bg-light and a border, not alert-light: Odoo's own view check
+                                 refuses an alert-* class without an alert role,
+                                 and it is right - a panel of counts announces
+                                 nothing and interrupts nobody. Same box, no
+                                 false promise to a screen reader. -->
+                            <div class="border rounded bg-light p-2 mb-0">
+                                <p class="d-flex justify-content-between align-items-center mb-1"
+                                   invisible="not needs_pe_review">
+                                    <button name="action_open_pending" type="object"
+                                            class="btn btn-link p-0 text-start fw-bold"
+                                            context="{'pending_states': ['pe_review']}">
+                                        Pending For P.E/P.C Review:
+                                    </button>
+                                    <span class="badge rounded-pill text-dark"
+                                          t-attf-style="background-color: {{
+                                              record.pending_pe_count.raw_value == 0
+                                              ? '#d4edda' : '#f8d7da' }}; padding: 5px 10px;">
+                                        <field name="pending_pe_count"/>
+                                    </span>
+                                </p>
+                                <p class="d-flex justify-content-between align-items-center mb-1"
+                                   invisible="not needs_hr_review">
+                                    <button name="action_open_pending" type="object"
+                                            class="btn btn-link p-0 text-start fw-bold"
+                                            context="{'pending_states': ['hr_review']}">
+                                        Pending For HR Review:
+                                    </button>
+                                    <span class="badge rounded-pill text-dark"
+                                          t-attf-style="background-color: {{
+                                              record.pending_hr_count.raw_value == 0
+                                              ? '#d4edda' : '#f8d7da' }}; padding: 5px 10px;">
+                                        <field name="pending_hr_count"/>
+                                    </span>
+                                </p>
+                                <p class="d-flex justify-content-between align-items-center mb-0">
+                                    <button name="action_open_pending" type="object"
+                                            class="btn btn-link p-0 text-start fw-bold"
+                                            context="{'pending_states': ['to_approve']}">
+                                        Pending For Approval:
+                                    </button>
+                                    <span class="badge rounded-pill text-dark"
+                                          t-attf-style="background-color: {{
+                                              record.pending_approval_count.raw_value == 0
+                                              ? '#d4edda' : '#f8d7da' }}; padding: 5px 10px;">
+                                        <field name="pending_approval_count"/>
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="text-center mt-2">
+                                <button name="action_new_request" type="object"
+                                        class="btn btn-primary rounded"
+                                        invisible="not open_for_new">
+                                    New <field name="code"/>
+                                </button>
+                                <button name="action_open_pending" type="object"
+                                        class="btn btn-secondary rounded ms-2">
+                                    Check Pending Requests
+                                </button>
+                            </div>
+                        </main>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_construction_request_type_search" model="ir.ui.view">
+        <field name="name">construction.request.type.search</field>
+        <field name="model">construction.request.type</field>
+        <field name="arch" type="xml">
+            <search string="Request Types">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Goes through HR" name="hr"
+                        domain="[('needs_hr_review', '=', True)]"/>
+                <filter string="Numbered per project" name="per_project"
+                        domain="[('numbering', '=', 'per_project')]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!--
+      Two actions on one model, because they are two different jobs.
+
+      The dashboard is where everybody arrives: cards, counts, and the button
+      that starts a request. Kanban only - a person who lands here and finds a
+      list of thirteen rows with a Create button has landed in the settings by
+      mistake.
+
+      The configuration one is the settings: a list, editable, for the manager
+      who is adding a fourteenth kind of request.
+    -->
+    <record id="action_construction_request_type" model="ir.actions.act_window">
+        <field name="name">Approval Requests</field>
+        <field name="res_model">construction.request.type</field>
+        <field name="view_mode">kanban</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No kinds of request are set up</p>
+            <p>Add them under Configuration.</p>
+        </field>
+    </record>
+
+    <record id="action_construction_request_type_config" model="ir.actions.act_window">
+        <field name="name">Request Types</field>
+        <field name="res_model">construction.request.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Set up the kinds of request</p>
+            <p>
+                A type says who has to see a request and how it is numbered.
+            </p>
+        </field>
+    </record>
+
+</odoo>

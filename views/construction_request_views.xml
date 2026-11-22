@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_construction_request_list" model="ir.ui.view">
+        <field name="name">construction.request.list</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <!--
+              Money sums at the foot, the type as a column rather than buried
+              in the number, and the columns nobody needs every day marked
+              optional so a person can build the list they work from.
+            -->
+            <list string="Requests" multi_edit="1"
+                  decoration-muted="state in ('cancelled', 'rejected')"
+                  decoration-bf="state == 'to_approve'"
+                  decoration-info="state == 'draft'">
+                <field name="name" decoration-bf="1"/>
+                <field name="type_code" string="Type" optional="show"/>
+                <field name="request_type_id" optional="hide"/>
+                <field name="description"/>
+                <field name="employee_id" optional="show"/>
+                <field name="project_id" optional="show"/>
+                <field name="requested_by_id" widget="many2one_avatar_user"
+                       optional="hide"/>
+                <field name="approver_expected_id" widget="many2one_avatar_user"
+                       string="Waiting On" optional="hide"/>
+                <field name="date_request" optional="show"/>
+                <field name="date_required" widget="remaining_days"
+                       string="Needed By" optional="show"/>
+                <field name="amount" widget="monetary" sum="Total"
+                       optional="show"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="approval_date" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company"
+                       optional="hide"/>
+                <field name="activity_ids" widget="list_activity" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"
+                       decoration-warning="state == 'to_approve'"
+                       decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <!--
+      The shape follows the screen people already use: the number as the title,
+      what is being asked for on the left, who signed it and when on the right,
+      and one notebook page per kind of request.
+
+    -->
+    <record id="view_construction_request_form" model="ir.ui.view">
+        <field name="name">construction.request.form</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <form string="Request">
+                <header>
+                    <button name="action_submit" type="object" string="Submit"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_pe_review" type="object"
+                            string="Project Review Done" class="btn-primary"
+                            invisible="state != 'pe_review'"
+                            groups="construction_requests.group_request_pe_review"/>
+                    <button name="action_hr_review" type="object"
+                            string="HR Review Done" class="btn-primary"
+                            invisible="state != 'hr_review'"
+                            groups="construction_requests.group_request_hr_review"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            class="btn-primary" invisible="state != 'to_approve'"
+                            groups="construction_requests.group_request_approver"/>
+                    <button name="action_reject" type="object" string="Reject"
+                            invisible="state in ('draft', 'approved', 'rejected', 'cancelled')"/>
+                    <!--
+                      Two ways back, and the label says who receives it. The
+                      first was called "Send Back", which is also what the
+                      other one is called - and the difference between them is
+                      the whole point: one goes to the person who raised it and
+                      gives the request a new revision number, the other goes
+                      one step back up the review chain and keeps it.
+                    -->
+                    <button name="action_send_back" type="object"
+                            string="Back a Step"
+                            invisible="state not in ('pe_review', 'hr_review', 'to_approve')"
+                            help="Return it to the reviewer before this one. The number is kept."/>
+                    <button name="action_revise" type="object"
+                            string="Return to Requester"
+                            invisible="state in ('draft', 'approved', 'cancelled')"
+                            help="Send it back to be corrected and resubmitted, as a new revision."/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Draft"
+                            invisible="state in ('draft', 'approved')"/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            invisible="state in ('approved', 'cancelled')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,pe_review,hr_review,to_approve,approved"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Cancelled" bg_color="text-bg-secondary"
+                            invisible="state != 'cancelled'"/>
+                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger"
+                            invisible="state != 'rejected'"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_related" type="object"
+                                class="oe_stat_button" icon="fa-list-ul"
+                                invisible="not project_id and not employee_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Related</span>
+                                <span class="o_stat_text">Requests</span>
+                            </div>
+                        </button>
+                    </div>
+                    <field name="employee_image" widget="image" class="oe_avatar"
+                           readonly="1" invisible="not employee_id"/>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1" invisible="not name"/>
+                            <span invisible="name" class="text-muted">New</span>
+                            <span invisible="revision == 0" class="text-muted">
+                                (revision <field name="revision" readonly="1" class="oe_inline"/>)
+                            </span>
+                        </h1>
+                        <field name="description" placeholder="What is being asked for"
+                               readonly="state != 'draft'"/>
+                    </div>
+
+                    <group>
+                        <group name="what">
+                            <field name="request_type_id" readonly="state != 'draft'"
+                                   options="{'no_create': True, 'no_open': True}"
+                                   decoration-info="1"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   readonly="state != 'draft'"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="employee_id" readonly="state != 'draft'"
+                                   options="{'no_create': True}"/>
+                            <field name="project_id" readonly="state != 'draft'"
+                                   required="numbering == 'per_project'"
+                                   options="{'no_create': True}"/>
+                            <!-- read by the conditions above and by the pages below -->
+                            <field name="numbering" invisible="1"/>
+                            <field name="needs_pe_review" invisible="1"/>
+                            <field name="needs_hr_review" invisible="1"/>
+                            <field name="active" invisible="1"/>
+                            <field name="type_code" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group name="signed" string="Signed off">
+                            <field name="requested_by_id" invisible="state == 'draft'"
+                                   options="{'no_open': True}"/>
+                            <field name="date_request" invisible="state == 'draft'"/>
+                            <field name="pe_reviewer_id" invisible="not pe_reviewer_id"
+                                   options="{'no_open': True}"/>
+                            <field name="pe_review_date" invisible="not pe_review_date"/>
+                            <field name="hr_reviewer_id" invisible="not hr_reviewer_id"
+                                   options="{'no_open': True}"/>
+                            <field name="hr_review_date" invisible="not hr_review_date"/>
+                            <!--
+                              Who it is assigned to, shown while it is still
+                              waiting; who actually signed, shown once it is
+                              done. They are two facts and the office asks for
+                              both - the first to chase, the second to audit.
+                            -->
+                            <field name="approver_expected_id"
+                                   widget="many2one_avatar_user"
+                                   invisible="state in ('approved', 'rejected',
+                                                        'cancelled')
+                                              or not approver_expected_id"
+                                   readonly="state in ('approved', 'rejected')"/>
+                            <field name="approver_id" invisible="not approver_id"
+                                   options="{'no_open': True}"/>
+                            <field name="approval_date" invisible="not approval_date"/>
+                            <field name="rejected_by_id" invisible="state != 'rejected'"
+                                   options="{'no_open': True}" decoration-danger="1"/>
+                            <field name="rejection_reason" invisible="state != 'rejected'"/>
+                            <field name="return_note"
+                                   invisible="state in ('draft', 'approved', 'rejected', 'cancelled')"
+                                   placeholder="What has to change before this goes forward"/>
+                        </group>
+                    </group>
+
+                    <group invisible="type_code not in ('ASR', 'SPC')">
+                        <group>
+                            <field name="amount" widget="monetary"
+                                   readonly="state != 'draft'"/>
+                        </group>
+                        <group invisible="type_code != 'ASR'">
+                            <field name="installment_count"
+                                   readonly="state != 'draft'"/>
+                            <button name="action_generate_installments" type="object"
+                                    string="Build the repayment" class="btn-link"
+                                    icon="fa-refresh" invisible="state != 'draft'"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Materials" name="materials"
+                              invisible="type_code != 'MR'">
+                            <group>
+                                <field name="date_required"
+                                       readonly="state != 'draft'"
+                                       placeholder="Empty means as soon as possible"/>
+                            </group>
+                            <field name="material_line_ids" readonly="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="item_no" string="No."/>
+                                    <field name="product_id"/>
+                                    <field name="description"/>
+                                    <field name="uom_id" string="Unit"/>
+                                    <field name="quantity_available" readonly="1"
+                                           string="In Stock"/>
+                                    <!--
+                                      The project and sector quantities are
+                                      typed, and on most lines nobody types
+                                      them. So they are off by
+                                      default, and the balance is blank rather
+                                      than a large negative number, on the
+                                      lines where the project quantity is
+                                      unknown.
+                                    -->
+                                    <field name="quantity_project" string="Project Qty"
+                                           optional="hide"/>
+                                    <field name="quantity_sector" string="Sector Qty"
+                                           optional="hide"/>
+                                    <field name="quantity_previous" readonly="1"
+                                           string="Requested Before"/>
+                                    <field name="has_balance" column_invisible="True"/>
+                                    <field name="balance_to_order" readonly="1"
+                                           optional="hide"
+                                           invisible="not has_balance"/>
+                                    <field name="quantity" sum="Required"/>
+                                </list>
+                            </field>
+                            <group string="Notes and remarks">
+                                <field name="notes" nolabel="1"
+                                       placeholder="Anything the reviewers should know."/>
+                            </group>
+                        </page>
+
+                        <page string="Repayment" name="repayment"
+                              invisible="type_code != 'ASR'">
+                            <field name="installment_ids" readonly="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="due_date"/>
+                                    <field name="amount" sum="Scheduled"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                </list>
+                            </field>
+                            <group class="oe_subtotal_footer oe_right">
+                                <field name="installment_total" widget="monetary"/>
+                                <field name="amount" widget="monetary" string="Requested"/>
+                            </group>
+                            <div class="alert alert-warning" role="alert"
+                                 invisible="installment_total == amount">
+                                The installments do not add up to the amount asked for.
+                            </div>
+                        </page>
+
+                        <page string="Notes" name="notes" invisible="type_code == 'MR'">
+                            <field name="notes" nolabel="1"
+                                   placeholder="Anything the reviewers should know."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_request_search" model="ir.ui.view">
+        <field name="name">construction.request.search</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <search string="Requests">
+                <field name="name" string="Number"/>
+                <field name="description"/>
+                <field name="employee_id"/>
+                <field name="project_id"/>
+                <field name="request_type_id"/>
+                <field name="requested_by_id"/>
+                <separator/>
+                <filter name="mine" string="My Requests"
+                        domain="[('requested_by_id', '=', uid)]"/>
+                <!--
+                  This was called Waiting For Me and listed everything waiting
+                  for anybody, which is a different list and a worse one to be
+                  told is yours. Now the request says who it is assigned to,
+                  so the two can be separate and both be true.
+                -->
+                <!--
+                  One filter per kind. They are grouped, so
+                  picking two shows both rather than neither - separate
+                  filters would give an empty list for MR then ALR.
+                -->
+                <separator/>
+                <filter name="type_mr" string="Material (MR)"
+                        domain="[('type_code', '=', 'MR')]"/>
+                <filter name="type_alr" string="Annual Leave (ALR)"
+                        domain="[('type_code', '=', 'ALR')]"/>
+                <filter name="type_elr" string="Emergency Leave (ELR)"
+                        domain="[('type_code', '=', 'ELR')]"/>
+                <filter name="type_asr" string="Advance Salary (ASR)"
+                        domain="[('type_code', '=', 'ASR')]"/>
+                <filter name="type_spc" string="Payment Certificate (SPC)"
+                        domain="[('type_code', '=', 'SPC')]"/>
+                <filter name="type_res" string="Resigning (RES)"
+                        domain="[('type_code', '=', 'RES')]"/>
+                <separator/>
+                <filter name="needed_soon" string="Needed Within a Week"
+                        domain="[('date_required', '&lt;=',
+                                  (context_today() + datetime.timedelta(days=7))
+                                  .strftime('%Y-%m-%d'))]"/>
+                <filter name="asap" string="As Soon As Possible"
+                        domain="[('date_required', '=', False),
+                                 ('type_code', '=', 'MR')]"/>
+                <separator/>
+                <filter name="in_review" string="In Review"
+                        domain="[('state', 'in', ('pe_review', 'hr_review', 'to_approve'))]"/>
+                <separator/>
+                <filter name="open" string="Open"
+                        domain="[('state', 'in', ('draft', 'pe_review', 'hr_review', 'to_approve'))]"/>
+                <filter name="approved" string="Approved" domain="[('state', '=', 'approved')]"/>
+                <filter name="rejected" string="Rejected" domain="[('state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="by_state" string="Status" domain="[]"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="by_type" string="Type" domain="[]"
+                            context="{'group_by': 'request_type_id'}"/>
+                    <filter name="by_project" string="Project" domain="[]"
+                            context="{'group_by': 'project_id'}"/>
+                    <filter name="by_employee" string="Employee" domain="[]"
+                            context="{'group_by': 'employee_id'}"/>
+                    <filter name="by_month" string="Submitted" domain="[]"
+                            context="{'group_by': 'date_request'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_construction_request_kanban" model="ir.ui.view">
+        <field name="name">construction.request.kanban</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <!--
+              The card answers, in the order somebody standing at the screen
+              asks: what is it, whose is it, what does it cost or when is it
+              wanted, and is anybody waiting on me.
+
+              Grouped by state, with every column shown even when empty -
+              a workflow that loses a step because nothing is in it today is
+              a picture that changes shape every morning.
+            -->
+            <kanban default_group_by="state" quick_create="false"
+                    class="o_construction_request_kanban"
+                    highlight_color="color"
+                    default_order="date_request desc, id desc"
+                    sample="1"
+                    records_draggable="false">
+                <field name="state"/>
+                <field name="type_code"/>
+                <field name="amount"/>
+                <field name="currency_id"/>
+                <field name="date_required"/>
+                <progressbar field="state"
+                             colors='{"approved": "success",
+                                      "rejected": "danger",
+                                      "cancelled": "muted",
+                                      "to_approve": "warning",
+                                      "hr_review": "info",
+                                      "pe_review": "info",
+                                      "draft": "200"}'/>
+                <templates>
+                    <!--
+                      Without this template there is no dropdown on a card at
+                      all - web.KanbanRecordMenu renders only what the arch
+                      puts in "menu" and shows nothing when the arch has no
+                      such template. Which means highlight_color was pointing
+                      at a field nobody could ever set: the colour was
+                      declared, read on every card, and unreachable. This
+                      is where the picker lives.
+                    -->
+                    <t t-name="menu">
+                        <a t-if="widget.editable" type="open" class="dropdown-item">Edit</a>
+                        <a t-if="widget.deletable" type="delete" class="dropdown-item">Delete</a>
+                        <field name="color" widget="kanban_color_picker"/>
+                    </t>
+
+                    <t t-name="card"
+                       t-att-class="['rejected', 'cancelled'].includes(record.state.raw_value) ? 'opacity-50' : ''">
+                        <!--
+                          Odoo's own ribbon rather than a hand-cut one. This
+                          module used to ship forty lines of scss drawing a
+                          diagonal band that web/views/widgets/ribbon already
+                          draws - and draws with variables for its width and
+                          its type size, which is the whole of what ours
+                          existed to tune.
+
+                          bg-*, not text-bg-*. ".ribbon span" sets the colour
+                          to white at a higher specificity than any text-bg-*
+                          utility can answer, so text-bg-light would have been
+                          white on near-white.
+                        -->
+                        <div class="ribbon ribbon-top-right"
+                             invisible="state == 'draft'">
+                            <field name="state" t-if="record.state.raw_value == 'pe_review'" class="bg-info"/>
+                            <field name="state" t-if="record.state.raw_value == 'hr_review'" class="bg-info"/>
+                            <field name="state" t-if="record.state.raw_value == 'to_approve'" class="bg-warning"/>
+                            <field name="state" t-if="record.state.raw_value == 'approved'" class="bg-success"/>
+                            <field name="state" t-if="record.state.raw_value == 'rejected'" class="bg-danger"/>
+                            <field name="state" t-if="record.state.raw_value == 'cancelled'" class="bg-secondary"/>
+                        </div>
+
+                        <main class="pe-5">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="badge rounded-pill text-bg-secondary">
+                                    <field name="type_code"/>
+                                </span>
+                                <field name="name" class="fw-bold fs-6"
+                                       placeholder="Draft"/>
+                            </div>
+
+                            <field name="description" class="text-truncate d-block"/>
+
+                            <!--
+                              Labelled: a bare name on a line of its own is a
+                              name; "Submitted by: <name>" is a fact. Five unlabelled lines on a card are
+                              five things the reader works the meaning of out
+                              again every time they look.
+                            -->
+                            <div class="d-flex flex-column mt-2 text-muted">
+                                <span invisible="not employee_id">For:
+                                    <field name="employee_id" options="{'no_open': True}"/>
+                                </span>
+                                <span invisible="not project_id">Project:
+                                    <field name="project_id" options="{'no_open': True}"/>
+                                </span>
+                                <span>Company:
+                                    <field name="company_id" options="{'no_open': True}"/>
+                                </span>
+                                <span>Submitted by:
+                                    <field name="requested_by_id" options="{'no_open': True}"/>
+                                </span>
+                                <span invisible="not date_request">Request Date:
+                                    <field name="date_request" widget="date"/>
+                                </span>
+                            </div>
+
+                            <!--
+                              On whether there IS a figure, not on the kind of
+                              request. A payment certificate with no lines yet
+                              showed 0.00.
+                            -->
+                            <div class="mt-1" invisible="not amount">
+                                <field name="amount" widget="monetary" class="fw-bold"/>
+                            </div>
+
+                            <field name="date_required" widget="remaining_days"
+                                   invisible="not date_required
+                                              or state in ('approved', 'rejected', 'cancelled')"/>
+
+                            <footer class="pt-1 d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2 text-muted">
+                                    <field name="activity_ids" widget="kanban_activity"/>
+                                    <span invisible="revision == 0"
+                                          class="badge text-bg-warning">
+                                        R<field name="revision"/>
+                                    </span>
+                                </div>
+                                <field name="approver_expected_id"
+                                       widget="many2one_avatar_user"
+                                       class="o_construction_kanban_avatar"
+                                       invisible="state != 'to_approve'"/>
+                                <field name="requested_by_id"
+                                       widget="many2one_avatar_user"
+                                       class="o_construction_kanban_avatar"
+                                       invisible="state == 'to_approve'"/>
+                            </footer>
+                        </main>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!--
+      Everything, in every state, with nothing applied. A list that quietly
+      hides the drafts and the rejected ones is a list somebody has to be told
+      about, and being told is how "it is not there" becomes a support call.
+      The filters are on the search bar for whoever wants them.
+    -->
+    <record id="action_construction_request" model="ir.actions.act_window">
+        <field name="name">All Requests</field>
+        <field name="res_model">construction.request</field>
+        <field name="view_mode">kanban,list,calendar,pivot,graph,form</field>
+        <!--
+          Written empty, not deleted.
+
+          This action used to carry {'search_default_open': 1}. Taking the line
+          out of the file did nothing to the database: an upgrade writes the
+          fields the record names and never clears the ones it stops naming, so
+          the filter went on hiding the drafts and the rejected ones on a
+          screen whose whole point is that it hides nothing. Setting it to {}
+          says the value out loud, and says it again on every upgrade - which
+          is what main will need when this is repeated there.
+        -->
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Raise a request</p>
+            <p>
+                A request is numbered when it is submitted, and goes to the
+                people its type asks for.
+            </p>
+        </field>
+    </record>
+
+
+    <!--
+      A calendar and a pivot.
+
+      They are not decoration. The calendar answers "who is away in October",
+      which on a leave request is the question the site asks before agreeing to
+      the next one. The pivot answers "how many of what, by project, this
+      quarter", which is the question a manager asks and which no list answers
+      without exporting it to a spreadsheet.
+    -->
+    <record id="view_construction_request_calendar" model="ir.ui.view">
+        <field name="name">construction.request.calendar</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <calendar string="Requests" date_start="date_request"
+                      color="request_type_id" mode="month"
+                      event_open_popup="1" quick_create="0">
+                <field name="request_type_id" filters="1"/>
+                <field name="employee_id"/>
+                <field name="project_id"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="view_construction_request_pivot" model="ir.ui.view">
+        <field name="name">construction.request.pivot</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <pivot string="Requests" sample="1">
+                <field name="request_type_id" type="row"/>
+                <field name="state" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_construction_request_graph" model="ir.ui.view">
+        <field name="name">construction.request.graph</field>
+        <field name="model">construction.request</field>
+        <field name="arch" type="xml">
+            <graph string="Requests" type="bar" sample="1">
+                <field name="request_type_id"/>
+                <field name="state"/>
+            </graph>
+        </field>
+    </record>
+
+</odoo>

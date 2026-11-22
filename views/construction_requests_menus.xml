@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      Two menus, in the order somebody uses them.
+
+      Approval Requests first, because it is where a person arrives: thirteen
+      cards, one per kind of request, each carrying the button that starts one
+      and the counts of what is waiting.
+
+      All Requests second, holding everything - every state, no domain.
+
+      There was a third called To Review, filtered to the three review states.
+      It is gone. Two lists of the same records, one a subset of the other, is
+      a person asking "which of these am I looking at" every time they arrive
+      - and the answer it gave was already a filter on the other one's search
+      bar. One place, everything in it.
+    -->
+    <menuitem id="menu_construction_requests_root"
+              name="Requests"
+              web_icon="construction_requests,static/description/icon.png"
+              sequence="35"
+              groups="group_request_user"/>
+
+    <menuitem id="menu_construction_requests_dashboard"
+              name="Approval Requests"
+              parent="menu_construction_requests_root"
+              action="action_construction_request_type"
+              sequence="10"
+              groups="group_request_user"/>
+
+    <menuitem id="menu_construction_requests_all"
+              name="All Requests"
+              parent="menu_construction_requests_root"
+              action="action_construction_request"
+              sequence="20"
+              groups="group_request_user"/>
+
+    <menuitem id="menu_construction_requests_config"
+              name="Configuration"
+              parent="menu_construction_requests_root"
+              sequence="90"
+              groups="group_request_manager"/>
+
+    <menuitem id="menu_construction_requests_config_types"
+              name="Request Types"
+              parent="menu_construction_requests_config"
+              action="action_construction_request_type_config"
+              sequence="10"
+              groups="group_request_manager"/>
+
+    <menuitem id="menu_construction_requests_config_numbering"
+              name="Numbering"
+              parent="menu_construction_requests_config"
+              action="action_construction_request_sequence"
+              sequence="20"
+              groups="group_request_manager"/>
+
+</odoo>

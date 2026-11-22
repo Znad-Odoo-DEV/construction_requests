@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      On the Preferences page, where a person looks for their own settings.
+      Anchored on the page's name rather than its string: a string is
+      translated and an xpath matching one stops matching the day somebody
+      works in another language.
+    -->
+    <record id="view_users_form_signature" model="ir.ui.view">
+        <field name="name">res.users.form.construction.signature</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='preferences']" position="inside">
+                <group name="construction_signature" string="Signature">
+                    <field name="construction_signature" widget="image"
+                           class="oe_avatar" nolabel="1"/>
+                    <div class="text-muted" colspan="2">
+                        Printed on the requests this person submits, reviews
+                        or approves. Uploaded once here, not attached to each
+                        request.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
